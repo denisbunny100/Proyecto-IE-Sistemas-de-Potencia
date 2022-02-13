@@ -53,10 +53,10 @@ function y_barra = Matriz_Ybarra(datos_linea,n,contin,datos_trafo,pasos)
                         y_barra(datos_trafo(i,1),datos_trafo(i,2)) = y_barra(datos_trafo(i,1),datos_trafo(i,2))+A2;
                         y_barra(datos_trafo(i,2),datos_trafo(i,1)) = y_barra(datos_trafo(i,2),datos_trafo(i,1))+A3;
                         y_barra(datos_trafo(i,2),datos_trafo(i,2)) = y_barra(datos_trafo(i,2),datos_trafo(i,2))+A4;
-                        A1 = y(a) + y(a+2); 
-                        A2 = B(a) + B(a+2);
-                        A3 = C(a) + C(a+2); 
-                        A4 = D(a) + D(a+2);
+                        A1 = y(a) + y(a+2) 
+                        A2 = B(a) + B(a+2)
+                        A3 = C(a) + C(a+2) 
+                        A4 = D(a) + D(a+2)
                         y_barra(datos_trafo(i,1),datos_trafo(i,1)) = y_barra(datos_trafo(i,1),datos_trafo(i,1))+A1;
                         y_barra(datos_trafo(i,1),datos_trafo(i,3)) = y_barra(datos_trafo(i,1),datos_trafo(i,3))+A2;
                         y_barra(datos_trafo(i,3),datos_trafo(i,1)) = y_barra(datos_trafo(i,3),datos_trafo(i,1))+A3;
@@ -65,13 +65,12 @@ function y_barra = Matriz_Ybarra(datos_linea,n,contin,datos_trafo,pasos)
                 end
             else
                 y = 1/(1j*datos_trafo(i,4));
-                c = (1+pasos(count)*datos_trafo(i,8))*exp(1j*deg2rad(datos_trafo(i,9)));
+                c = (1+pasos(k)*datos_trafo(i,8))*exp(1j*deg2rad(datos_trafo(i,9)));
                 y_barra(datos_trafo(i,1),datos_trafo(i,1)) = y_barra(datos_trafo(i,1),datos_trafo(i,1))+y;
                 y_barra(datos_trafo(i,1),datos_trafo(i,2)) = y_barra(datos_trafo(i,1),datos_trafo(i,2))-c*y;
                 y_barra(datos_trafo(i,2),datos_trafo(i,1)) = y_barra(datos_trafo(i,2),datos_trafo(i,1))-y*conj(c);
                 y_barra(datos_trafo(i,2),datos_trafo(i,2)) = y_barra(datos_trafo(i,2),datos_trafo(i,2))+y*abs(c)^2;
             end
-            count = count+1;
         end
     end
 end
