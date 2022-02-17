@@ -19,6 +19,7 @@ function [Jacob] = Newton_Raphson( Y_barra, datos_potencia, init, Sb)
             M(i-1,j-1) = -N(i-1,j-1);
         end
     end
+    Jacob = [H N;M L];
     datos_potencia(:,3:8) = datos_potencia(:,3:8)./Sb; 
     Pprog = datos_potencia(2:end,3)-datos_potencia(2:end,5);
     Qprog = datos_potencia(2:end,4)-datos_potencia(2:end,6);
@@ -28,7 +29,6 @@ function [Jacob] = Newton_Raphson( Y_barra, datos_potencia, init, Sb)
     delta_del = deltaQ(datos_potencia(2:end,2) == 1); 
     deltas = [deltaP;deltaQ];
     pos = find((deltas == delta_del)==1);
-    Jacob = [H N;M L];
     for i = 1:length(pos)
         try
             Jacob(pos(i),:) = 0;
@@ -48,16 +48,40 @@ function [Jacob] = Newton_Raphson( Y_barra, datos_potencia, init, Sb)
             del_v = deltav_v.*datos_potencia(datos_potencia(2:end,2)~=1,9);
             vs = datos_potencia(datos_potencia(2:end,2)~=1,9)+del_v;
         end
-        V(datos_potencia(2:end,2)~=1) = vs;
-        delta(2:end) = deltas_v(2:length(deltaP));
+        V(datos_potencia(:,2)==2) = vs;
+        delta(2:end) = deltas_v(1:length(deltaP));
         for i = 1:length(Y_barra(2:end,1))
             for j = 1:length(Y_barra(1,:))
                 Pcalc(i) = Pcalc(i) + abs(Y_barra(i+1,j)*V(i+1)*V(j))*cos(angle(Y_barra(i+1,j))+delta(j)-delta(i+1));
                 Qcalc(i) = Qcalc(i) + abs(Y_barra(i+1,j)*V(i+1)*V(j))*sin(angle(Y_barra(i+1,j))+delta(j)-delta(i+1));
             end
         end
+        Qcalc = -Qcalc;
         deltaP = Pprog - Pcalc;
         deltaQ = Qprog - Qcalc;
+        Qmins = datos_potencia(datos_potencia(:,2)==1,7);
+        Qmaxs = datos_potencia(datos_potencia(:,2)==1,8);
+        Qlook = Qcalc(datos_potencia(:,2)==1);
+        QPV = datos_potencia(datos_potencia(:,2)==1,2);
+        for i = 1:length(Qmins)
+            try
+                if Qlook(i) < Qmins(i)
+                    QPV(i) = 2;
+                    Qlook(i) = Qmins(i);
+                elseif Qlook(i) > Qmaxs(i)
+                    QPV(i) = 2;
+                    Qlook(i) = Qmaxs(i);
+                end
+            catch ME
+                if Qlook < Qmins
+                    QPV = 2;
+                    Qlook = Qmins;
+                elseif Qlook > Qmaxs
+                    QPV = 2;
+                    Qlook = Qmaxs;
+                end
+            end
+        end
         count = count+1;
     end
 end
