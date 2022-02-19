@@ -27,48 +27,55 @@ function [V, delta] = Newton_Raphson( Y_barra, datos_potencia, init, Sb)
             for i = 1:length(limits(:,1))
                 try
                     if Qcalc_PV(i) < limits(i,1)
-                        datos_potencia(posiciones_limits(i), 2) = 1;
+                        datos_potencia(posiciones_limits(i), 2) = 2;
                         pos = find((Qcalc == Qcalc_PV(i))==1);
                         datos_potencia(pos,4) = limits(i,1);
                         Qprog(pos) = limits(i,1);
                         deltaQ(pos) = Qprog(pos) - Qcalc(pos);
                     elseif Qcalc_PV(i) > limits(i,2)
-                        datos_potencia(posiciones_limits(i), 2) = 1;
+                        datos_potencia(posiciones_limits(i), 2) = 2;
                         pos = find((Qcalc == Qcalc_PV(i))==1);
                         Qprog(pos) = limits(i,2);
                         deltaQ(pos) = Qprog(pos) - Qcalc(pos);
                     end
                 catch ME
                     if Qcalc_PV < limits(i,1)
-                        datos_potencia(posiciones_limits, 2) = 1;
+                        datos_potencia(posiciones_limits, 2) = 2;
                         pos = find((Qcalc == Qcalc_PV)==1);
                         datos_potencia(pos,4) = limits(i,1);
-                        Qcalc(pos) = limits(i,1);
-                        disp("Limite minimo zzz")
+                        Qprog(pos) = limits(i,1);
                         deltaQ(pos) = Qprog(pos) - Qcalc(pos);
                     elseif Qcalc_PV(i) > limits(i,2)
-                        datos_potencia(posiciones_limits(i), 2) = 1;
+                        datos_potencia(posiciones_limits(i), 2) = 2;
                         pos = find((deltaQ == Qcalc_PV)==1);
                         datos_potencia(pos,4) = limits(i,2);
-                        Qcalc(pos) = limits(i,2);
-                        disp("Limite maximo zzz")
+                        Qprog(pos) = limits(i,2);
                         deltaQ(pos) = Qprog(pos) - Qcalc(pos);
                     end
                 end
             end
         end
-        disp(deltaP)
-        disp(deltaQ)
         delta_del = deltaQ(datos_potencia(2:end,2) == 1);
         deltaQ1 = deltaQ(~(datos_potencia(2:end,2) == 1));
-        pos_del = find((deltas == delta_del)==1);
+        if ~isempty(delta_del)
+            pos_del = find((deltas == delta_del)==1);
+        else
+            pos_del = [];
+        end
         H = []; N = []; L = []; M = [];
         for i = 2:length(Y_barra(:,1))
             for j = 2:length(Y_barra(1,:))
-                H(i-1,j-1) = -abs(Y_barra(i,j)*V(i)*V(j))*sin(angle(Y_barra(i,j))+delta(j)-delta(i));
-                L(i-1,j-1) = H(i-1,j-1);
-                N(i-1,j-1) = abs(Y_barra(i,j)*V(i)*V(j))*cos(angle(Y_barra(i,j))+delta(j)-delta(i));
-                M(i-1,j-1) = -N(i-1,j-1);
+                if i ~= j
+                    H(i-1,j-1) = -abs(Y_barra(i,j)*V(i)*V(j))*sin(angle(Y_barra(i,j))+delta(j)-delta(i));
+                    L(i-1,j-1) = H(i-1,j-1);
+                    N(i-1,j-1) = abs(Y_barra(i,j)*V(i)*V(j))*cos(angle(Y_barra(i,j))+delta(j)-delta(i));
+                    M(i-1,j-1) = -N(i-1,j-1);
+                else
+                    H(i-1,j-1) = -Qcalc(i-1)-imag(Y_barra(i,j))*V(i)^2;
+                    L(i-1,j-1) = Qcalc(i-1)-imag(Y_barra(i,j))*V(i)^2;
+                    N(i-1,j-1) = Pcalc(i-1)+real(Y_barra(i,j))*V(i)^2;
+                    M(i-1,j-1) = -N(i-1,j-1);
+                end
             end
         end
         Jacob = [H N;M L];
@@ -89,6 +96,10 @@ function [V, delta] = Newton_Raphson( Y_barra, datos_potencia, init, Sb)
         end
         if ~isempty(pos_del)
             Jacob = reshape(Jacob(Jacob~=0), [], length(deltas_pot));
+        end
+        disp(Jacob)
+        if count > 5
+            break
         end
         deltas_v = inv(Jacob)*deltas_pot;
         deltav_v = deltas_v(length(deltaP)+1:end);

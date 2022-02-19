@@ -65,10 +65,17 @@ function [V, delta] = Newton_Raphson( Y_barra, datos_potencia, init, Sb)
         H = []; N = []; L = []; M = [];
         for i = 2:length(Y_barra(:,1))
             for j = 2:length(Y_barra(1,:))
-                H(i-1,j-1) = -abs(Y_barra(i,j)*V(i)*V(j))*sin(angle(Y_barra(i,j))+delta(j)-delta(i));
-                L(i-1,j-1) = H(i-1,j-1);
-                N(i-1,j-1) = abs(Y_barra(i,j)*V(i)*V(j))*cos(angle(Y_barra(i,j))+delta(j)-delta(i));
-                M(i-1,j-1) = -N(i-1,j-1);
+                if i ~= j
+                    H(i-1,j-1) = -abs(Y_barra(i,j)*V(i)*V(j))*sin(angle(Y_barra(i,j))+delta(j)-delta(i));
+                    L(i-1,j-1) = H(i-1,j-1);
+                    N(i-1,j-1) = abs(Y_barra(i,j)*V(i)*V(j))*cos(angle(Y_barra(i,j))+delta(j)-delta(i));
+                    M(i-1,j-1) = -N(i-1,j-1);
+                else
+                    H(i-1,j-1) = -Qcalc(i-1)-imag(Y_barra(i,j))*V(i)^2;
+                    L(i-1,j-1) = Qcalc(i-1)-imag(Y_barra(i,j))*V(i)^2;
+                    N(i-1,j-1) = Pcalc(i-1)+real(Y_barra(i,j))*V(i)^2;
+                    M(i-1,j-1) = Pcalc(i-1)-real(Y_barra(i,j))*V(i)^2;
+                end
             end
         end
         Jacob = [H N;M L];
@@ -91,7 +98,7 @@ function [V, delta] = Newton_Raphson( Y_barra, datos_potencia, init, Sb)
             Jacob = reshape(Jacob(Jacob~=0), [], length(deltas_pot));
         end
         disp(Jacob)
-        if count > 5
+        if count == 2
             break
         end
         deltas_v = inv(Jacob)*deltas_pot;
