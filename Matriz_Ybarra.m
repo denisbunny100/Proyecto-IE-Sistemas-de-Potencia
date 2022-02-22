@@ -26,7 +26,7 @@ function y_barra = Matriz_Ybarra(datos_linea,n,contin,datos_trafo,pasos)
         end
     end
     count = 1;
-    if datos_trafo
+    if ~isempty(datos_trafo)
         for i = 1:length(datos_trafo(:,1))
             if datos_trafo(i,7) ~= 0
                 if datos_trafo(i,3) ~= 0
