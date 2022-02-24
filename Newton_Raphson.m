@@ -1,4 +1,4 @@
-function [V, delta, count] = Newton_Raphson( Y_barra, datos_potencia, init, Sb)
+function [V, delta, count] = Newton_Raphson( Y_barra, datos_potencia, init, Sb, metodo)
     datos_potencia(datos_potencia(:,9) == false,9) = init;
     V = datos_potencia(:,9);
     delta = datos_potencia(:,10);
@@ -23,7 +23,6 @@ function [V, delta, count] = Newton_Raphson( Y_barra, datos_potencia, init, Sb)
         limits = datos_potencia(datos_potencia(:,2)==1,7:8);
         posiciones_limits = find(datos_potencia(:,2) == 1);
         Qd_PV = datos_potencia(datos_potencia(:,2)==1,4);
-        deltas = [deltaP;deltaQ];
         if count > 1
             for i = 1:length(limits(:,1))
                 try
@@ -74,21 +73,31 @@ function [V, delta, count] = Newton_Raphson( Y_barra, datos_potencia, init, Sb)
                 end
             end
         end
-        Jacob = [H N;M L];
-        if ~isempty(delta_del)
-            iaux2 = logical([zeros(size(deltaP));datos_potencia(2:end,2)==1]);
-            Jacob = Jacob(~iaux2,~iaux2);
-        end
         deltas_pot = [deltaP;deltaQ1];
-        deltas_v = inv(Jacob)*deltas_pot;
-        deltav_v = deltas_v(length(deltaP)+1:end);
+        switch metodo
+            case "normal"
+                Jacob = [H N;M L];
+                if ~isempty(delta_del)
+                    iaux2 = logical([zeros(size(deltaP));datos_potencia(2:end,2)==1]);
+                    Jacob = Jacob(~iaux2,~iaux2);
+                    deltas_v = inv(Jacob)*deltas_pot;
+                    delta_deltas = deltas_v(1:length(deltaP));
+                    deltav_v = deltas_v(length(deltaP)+1:end); 
+                end
+            case "NRD"
+                delta_deltas = inv(H)*deltaP;
+                deltav_v = inv(L(~(datos_potencia(2:end,2) == 1), ~(datos_potencia(2:end,2) == 1)))*deltaQ1;
+            case "NRDR"
+                deltas_pot = deltas_pot./V;
+                delta_deltas = inv(-imag(deltasY_barra(2:end,2:end)))*deltas_pot(1:length(deltaP));
+                deltav_v = (-imag(x(~(datos_potencia(2:end,2)==1),~(datos_potencia(2:end,2)==1))))*deltas_pot(length(deltaP)+1:end);
+        end
         del_v = deltav_v.*datos_potencia(datos_potencia(2:end,2)~=1,9);
         V(datos_potencia(1:end,2)== 2) = V(datos_potencia(1:end,2)== 2)+del_v;
-        delta(2:end) = deltas_v(1:length(deltaP))+delta(2:end); 
+        delta(2:end) = delta_deltas+delta(2:end);
+        
         if abs(deltas_pot) < error
             break
-        else
-            disp(deltas_pot)
         end
         count = count + 1;
     end
