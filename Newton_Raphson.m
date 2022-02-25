@@ -1,4 +1,4 @@
-function [V, delta, count, Pcalc, Qcalc] = Newton_Raphson( Y_barra, datos_potencia, init, Sb, metodo)
+function [V, delta, count] = Newton_Raphson( Y_barra, datos_potencia, init, Sb, metodo)
     datos_potencia(datos_potencia(:,9) == false,9) = init;
     V = datos_potencia(:,9);
     delta = datos_potencia(:,10);
@@ -97,6 +97,10 @@ function [V, delta, count, Pcalc, Qcalc] = Newton_Raphson( Y_barra, datos_potenc
         delta(2:end) = delta_deltas+delta(2:end);
         if abs(deltas_pot) < error
             break
+        elseif count > 20
+            break
+        else
+            deltas_pot
         end
         count = count + 1;
     end
