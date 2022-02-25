@@ -1,4 +1,4 @@
-function [V, delta, count] = Newton_Raphson( Y_barra, datos_potencia, init, Sb, metodo)
+function [V, delta, count, Pcalc, Qcalc] = Newton_Raphson( Y_barra, datos_potencia, init, Sb, metodo)
     datos_potencia(datos_potencia(:,9) == false,9) = init;
     V = datos_potencia(:,9);
     delta = datos_potencia(:,10);
@@ -79,11 +79,11 @@ function [V, delta, count] = Newton_Raphson( Y_barra, datos_potencia, init, Sb, 
                 Jacob = [H N;M L];
                 if ~isempty(delta_del)
                     iaux2 = logical([zeros(size(deltaP));datos_potencia(2:end,2)==1]);
-                    Jacob = Jacob(~iaux2,~iaux2);
-                    deltas_v = inv(Jacob)*deltas_pot;
-                    delta_deltas = deltas_v(1:length(deltaP));
-                    deltav_v = deltas_v(length(deltaP)+1:end); 
+                    Jacob = Jacob(~iaux2,~iaux2); 
                 end
+                deltas_v = inv(Jacob)*deltas_pot;
+                delta_deltas = deltas_v(1:length(deltaP));
+                deltav_v = deltas_v(length(deltaP)+1:end);
             case "NRD"
                 delta_deltas = inv(H)*deltaP;
                 deltav_v = inv(L(~(datos_potencia(2:end,2) == 1), ~(datos_potencia(2:end,2) == 1)))*deltaQ1;
@@ -95,7 +95,6 @@ function [V, delta, count] = Newton_Raphson( Y_barra, datos_potencia, init, Sb, 
         del_v = deltav_v.*datos_potencia(datos_potencia(2:end,2)~=1,9);
         V(datos_potencia(1:end,2)== 2) = V(datos_potencia(1:end,2)== 2)+del_v;
         delta(2:end) = delta_deltas+delta(2:end);
-        
         if abs(deltas_pot) < error
             break
         end
