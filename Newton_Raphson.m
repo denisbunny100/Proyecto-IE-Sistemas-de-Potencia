@@ -1,11 +1,13 @@
-function [V, delta, count] = Newton_Raphson( Y_barra, datos_potencia, init, Sb, metodo)
-    datos_potencia(datos_potencia(:,9) == false,9) = init;
+function [V, delta, count, datos_potencia] = Newton_Raphson( Y_barra, datos_potencia, datos_linea, Sb, metodo, err)
     V = datos_potencia(:,9);
     delta = datos_potencia(:,10);
+    if metodo == "DC"
+        V = ones(size(datos_potencia(:,9)));
+    end
     datos_potencia(:,3:8) = datos_potencia(:,3:8)./Sb;
     Pprog = datos_potencia(2:end,3)-datos_potencia(2:end,5);
     Qprog = datos_potencia(2:end,4)-datos_potencia(2:end,6);
-    error = 1e-3;
+    error = err;
     count = 1;
     while true
         Pcalc = zeros(length(Y_barra(2:end,1)),1); Qcalc = zeros(length(Y_barra(2:end,1)),1);
@@ -17,41 +19,25 @@ function [V, delta, count] = Newton_Raphson( Y_barra, datos_potencia, init, Sb, 
         end
         Qcalc = -Qcalc;
         deltaP = Pprog - Pcalc;
-        deltaQ = Qprog - Qcalc;
-        %delta_del = deltaQ(datos_potencia(2:end,2) == 1); 
+        deltaQ = Qprog - Qcalc; 
         Qcalc_PV = Qcalc(datos_potencia(2:end,2) == 1);
         limits = datos_potencia(datos_potencia(:,2)==1,7:8);
         posiciones_limits = find(datos_potencia(:,2) == 1);
         Qd_PV = datos_potencia(datos_potencia(:,2)==1,4);
         if count > 1
             for i = 1:length(limits(:,1))
-                try
-                    if Qcalc_PV(i) + Qd_PV(i) < limits(i,1)
-                        datos_potencia(posiciones_limits(i), 2) = 2;
-                        pos = find((Qcalc == Qcalc_PV(i))==1);
-                        datos_potencia(pos,4) = limits(i,1);
-                        Qprog(pos) = limits(i,1);
-                        deltaQ(pos) = Qprog(pos) - Qcalc(pos);
-                    elseif Qcalc_PV(i) + Qd_PV(i) > limits(i,2)
-                        datos_potencia(posiciones_limits(i), 2) = 2;
-                        pos = find((Qcalc == Qcalc_PV(i))==1);
-                        Qprog(pos) = limits(i,2);
-                        deltaQ(pos) = Qprog(pos) - Qcalc(pos);
-                    end
-                catch ME
-                    if Qcalc_PV + Qd_PV < limits(i,1)
-                        datos_potencia(posiciones_limits, 2) = 2;
-                        pos = find((Qcalc == Qcalc_PV)==1);
-                        datos_potencia(pos,4) = limits(i,1);
-                        Qprog(pos) = limits(i,1);
-                        deltaQ(pos) = Qprog(pos) - Qcalc(pos);
-                    elseif Qcalc_PV(i) + Qd_PV > limits(i,2)
-                        datos_potencia(posiciones_limits(i), 2) = 2;
-                        pos = find((deltaQ == Qcalc_PV)==1);
-                        datos_potencia(pos,4) = limits(i,2);
-                        Qprog(pos) = limits(i,2);
-                        deltaQ(pos) = Qprog(pos) - Qcalc(pos);
-                    end
+                if Qcalc_PV(i) + Qd_PV(i) < limits(i,1)
+                    datos_potencia(posiciones_limits(i), 2) = 2;
+                    pos = find((Qcalc == Qcalc_PV(i))==1);
+                    datos_potencia(pos,4) = limits(i,1);
+                    Qprog(pos) = limits(i,1)-datos_potencia(pos,5);
+                    deltaQ(pos) = Qprog(pos) - Qcalc(pos);
+                elseif Qcalc_PV(i) + Qd_PV(i) > limits(i,2)
+                    datos_potencia(posiciones_limits(i), 2) = 2;
+                    pos = find((Qcalc == Qcalc_PV(i))==1);
+                    datos_potencia(pos,4) = limits(i,2);
+                    Qprog(pos) = limits(i,2)-datos_potencia(pos,5);
+                    deltaQ(pos) = Qprog(pos) - Qcalc(pos);
                 end
             end
         end
@@ -88,23 +74,31 @@ function [V, delta, count] = Newton_Raphson( Y_barra, datos_potencia, init, Sb, 
                 delta_deltas = inv(H)*deltaP;
                 deltav_v = inv(L(~(datos_potencia(2:end,2) == 1), ~(datos_potencia(2:end,2) == 1)))*deltaQ1;
             case "NRDR"
-                deltas_pot = deltas_pot./V;
-                delta_deltas = inv(-imag(deltasY_barra(2:end,2:end)))*deltas_pot(1:length(deltaP));
-                deltav_v = (-imag(x(~(datos_potencia(2:end,2)==1),~(datos_potencia(2:end,2)==1))))*deltas_pot(length(deltaP)+1:end);
+                deltaP = deltaP./V(2:end);
+                deltaQ = deltaQ(datos_potencia(2:end,2) == 2)./V(datos_potencia(2:end,2) == 2);
+                deltas_pot = [deltaP;deltaQ];
+                delta_deltas = inv(-imag(Y_barra(2:end,2:end)))*deltas_pot(1:length(deltaP));
+                Y_aux = Y_barra(2:end,2:end);
+                del_v = inv(-imag(Y_aux(datos_potencia(2:end,2)==2,datos_potencia(2:end,2)==2)))*deltas_pot(length(deltaP)+1:end);
+            case "DC"
+                 Bserie = -1./imag((1./(Y_barra-diag(datos_linea(:,5)))));
+                 delta = -inv(Bserie(2:end,2:end))*deltaP;
+                 break
         end
-        del_v = deltav_v.*datos_potencia(datos_potencia(2:end,2)~=1,9);
-        V(datos_potencia(1:end,2)== 2) = V(datos_potencia(1:end,2)== 2)+del_v;
+        if metodo ~= "NRDR"
+            del_v = deltav_v.*datos_potencia(datos_potencia(:,2)==2,9);
+        end
+        V(datos_potencia(:,2) == 2) = V(datos_potencia(:,2)== 2)+del_v;
         delta(2:end) = delta_deltas+delta(2:end);
         if abs(deltas_pot) < error
             break
-        elseif count > 20
+        elseif count == 50
             break
-        else
-            deltas_pot
-        end
+        end 
         count = count + 1;
     end
     count = count-1;
+    datos_potencia(:,3:8) = datos_potencia(:,3:8).*Sb;
 end
 
 
